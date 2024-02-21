@@ -1,32 +1,31 @@
-
 ! ****************************************************
-  subroutine uflux(dt, rei, dx, dy, UO, VO, UU, DFUNC)
+  subroutine uflux()
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, intent(out), dimension(0:NX+2,0:NY+2) :: UU
-  double precision, intent(in),  dimension(0:NX+2,0:NY+2) :: UO, VO
-  double precision, intent(in),  dimension(NX,NY)         :: DFUNC
   integer          :: i, j
   double precision :: CU1, CU2, CV1, CV2
   double precision :: AX1, AX2, AY1, AY2, UIJK, VIJK, DVEL
   double precision :: UU1, UU2, UU3, UU4, U2, U4, ADVX, VISX, SDRAGX
-  double precision :: dt, rei, DX, DY, DXI, DYI, DDXI, DDYI
+  double precision :: dt, rei, DXI, DYI, DDXI, DDYI
   double precision :: C1, C2
 
-  DXI = 1.D0/DX
-  DYI = 1.D0/DY
-  DDXI= DXI/DX
-  DDYI= DYI/DY
+  dt  = para%dt
+  rei = 1.D0/para%Reynolds
+  DXI = 1.D0/para%DX
+  DYI = 1.D0/para%DY
+  DDXI= DXI/para%DX
+  DDYI= DYI/para%DY
   C1 = 1.D0/16.D0
   C2 = 1.D0/24.D0
 
-!$OMP PARALLEL &
+!$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(dt, rei, DXI, DYI, DDXI, DDYI, C1, C2) &
-!$OMP PRIVATE(CU1, CU2, CV1, CV2, i, j) &
+!$OMP PRIVATE(CU1, CU2, CV1, CV2) &
 !$OMP PRIVATE(AX1, AX2, AY1, AY2, UIJK, VIJK, DVEL) &
 !$OMP PRIVATE(UU1, UU2, UU3, UU4, U2, U4, ADVX, VISX, SDRAGX)
-!$OMP DO SCHEDULE(static)
   DO J=2,NY
   DO I=2,NX-1
 
@@ -63,41 +62,40 @@
     UU(I,J)=UO(I,J)+DT*(-ADVX+VISX+SDRAGX)
   END DO
   END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!$OMP END PARALLEL DO
 
   return
   end subroutine uflux
 
 
 ! ****************************************************
-  subroutine vflux(dt, rei, dx, dy, UO, VO, VV, DFUNC)
+  subroutine vflux()
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, intent(out), dimension(0:NX+2,0:NY+2) :: VV
-  double precision, intent(in),  dimension(0:NX+2,0:NY+2) :: UO, VO
-  double precision, intent(in),  dimension(NX,NY)         :: DFUNC
   integer          :: i, j
   double precision :: CU1, CU2, CV1, CV2
   double precision :: AX1, AX2, AY1, AY2, UIJK, VIJK, DVEL
   double precision :: VV1, VV2, VV3, VV4, V2, V4, ADVY, VISY, SDRAGY
-  double precision :: dt, rei, DX, DY, DXI, DYI, DDXI, DDYI
+  double precision :: dt, rei, DXI, DYI, DDXI, DDYI
   double precision :: C1, C2
 
-  DXI = 1.D0/DX
-  DYI = 1.D0/DY
-  DDXI= DXI/DX
-  DDYI= DYI/DY
+  dt  = para%dt
+  rei = 1.D0/para%Reynolds
+  DXI = 1.D0/para%DX
+  DYI = 1.D0/para%DY
+  DDXI= DXI/para%DX
+  DDYI= DYI/para%DY
   C1 = 1.D0/16.D0
   C2 = 1.D0/24.D0
 
-!$OMP PARALLEL &
+!$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(dt, rei, DXI, DYI, DDXI, DDYI, C1, C2) &
-!$OMP PRIVATE(CU1, CU2, CV1, CV2, i, j) &
+!$OMP PRIVATE(CU1, CU2, CV1, CV2) &
 !$OMP PRIVATE(AX1, AX2, AY1, AY2, UIJK, VIJK, DVEL) &
 !$OMP PRIVATE(VV1, VV2, VV3, VV4, V2, V4, ADVY, VISY, SDRAGY)
-!$OMP DO SCHEDULE(static)
   DO J=2,NY-1
   DO I=2,NX
 
@@ -134,8 +132,7 @@
     VV(I,J)=VO(I,J)+DT*(-ADVY+VISY+SDRAGY)
   END DO
   END DO
-!$OMP END DO
-!$OMP END PARALLEL
+!$OMP END PARALLEL DO
 
   return
   end subroutine vflux
@@ -143,21 +140,21 @@
 
 
 ! **************************************************
-  subroutine Prj_Vel(dt, dx, dy, UU, VV, PP)
+  subroutine Prj_Vel()
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, intent(inout), dimension(0:NX+2,0:NY+2) :: UU, VV
-  double precision, intent(in),    dimension(0:NX+2,0:NY+2) :: PP
   integer          :: i, j
-  double precision :: DX, DY, DXI, DYI, dt
+  double precision :: DXI, DYI, dt
 
-  DXI = 1.D0/DX
-  DYI = 1.D0/DY
+  DXI = 1.D0/para%DX
+  DYI = 1.D0/para%DY
+  dt  = para%dt
 
 !$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(DXI, DT) &
-!$OMP PRIVATE(i, j)
+!$OMP FIRSTPRIVATE(DXI, DT)
   DO J=2,NY
   DO I=2,NX-1
     UU(I,J)=UU(I,J)-DT*(PP(I+1,J)-PP(I,J))*DXI
@@ -166,8 +163,7 @@
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(DYI, DT) &
-!$OMP PRIVATE(i, j)
+!$OMP FIRSTPRIVATE(DYI, DT)
   DO J=2,NY-1
   DO I=2,NX
     VV(I,J)=VV(I,J)-DT*(PP(I,J+1)-PP(I,J))*DYI
@@ -179,28 +175,27 @@
   end subroutine Prj_Vel
 
 
-! ***************************************************************************
-  subroutine BC_Vel(dt, dx, dy, nstep, istep, UU, VV, UO, UUIN, VVIN)
+! ******************************************************
+  subroutine BC_Vel(istep)
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, intent(inout), dimension(0:NX+2,0:NY+2) :: UU, VV
-  double precision, intent(in),    dimension(0:NX+2,0:NY+2) :: UO
-  double precision, intent(in),    dimension(NSTEP)         :: UUIN, VVIN
-  integer          :: i, j, istep, nstep
-  double precision :: DX, DY, DXI, dt
+  integer          :: i, j, istep
+  double precision :: DXI, dt
 
-  DXI = 1.D0/DX
+  DXI = 1.D0/para%DX
+  dt  = para%dt
 
 !$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(DXI, DT, ISTEP) &
-!$OMP PRIVATE(j)
+!$OMP FIRSTPRIVATE(DXI, DT, ISTEP)
   DO J=2,NY
     UU(1,J)=UUIN(ISTEP)
     UU(0,J)=UUIN(ISTEP)
     VV(1,J)=VVIN(ISTEP)
     VV(0,J)=VVIN(ISTEP)
-    UU(NX,J)=UO(NX,J)-DT*(UO(NX,J)-UO(NX-1,J))*DXI
+    UU(NX,J)  =UO(NX,J)-DT*(UO(NX,J)-UO(NX-1,J))*DXI
     VV(NX+1,J)=VV(NX,J)
     VV(NX+2,J)=2.D0*VV(NX+1,J)-VV(NX,J)
     UU(NX+1,J)=2.D0*UU(NX,J)-UU(NX-1,J)
@@ -208,8 +203,7 @@
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(ISTEP) &
-!$OMP PRIVATE(i)
+!$OMP FIRSTPRIVATE(ISTEP)
   DO I=0,NX+2
     UU(I,1)=UUIN(ISTEP)
     UU(I,0)=UUIN(ISTEP)
@@ -217,7 +211,7 @@
     VV(I,0)=VVIN(ISTEP)
     UU(I,NY+1)=UUIN(ISTEP)
     UU(I,NY+2)=UUIN(ISTEP)
-    VV(I,NY)=VVIN(ISTEP)
+    VV(I,NY)  =VVIN(ISTEP)
     VV(I,NY+1)=VVIN(ISTEP)
   END DO
 !$OMP END PARALLEL DO

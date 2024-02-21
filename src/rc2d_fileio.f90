@@ -1,20 +1,36 @@
+! ******************************************
+  subroutine log(m, stp, tm, loop, err)
+  implicit none
+  integer          :: m, stp, loop
+  double precision :: tm, err
 
-! ***********************************************************************
-  subroutine PDM_profile(IA, IB, JA, JB, CDD, PFUNC, DFUNC)
+  write(m,"(I10, F10.6, I7, E14.7)") STP, TM, loop, err
+
+  return
+  end subroutine log
+
+! **********************************************************
+  subroutine PDM_profile()
+  !$ use omp_lib
+  use array_def
+  use param_def
 
   implicit none
-  include 'size.fi'
-  double precision, dimension(NX,NY)         :: DFUNC
-  double precision, dimension(NY)            :: PFUNC
   integer          :: i, j, IA, IB, JA, JB
   double precision :: cdd
+
+  cdd = para%cdd
+  IA  = para%IA
+  IB  = para%IB
+  JA  = para%JA
+  JB  = para%JB
 
   OPEN(1,FILE='pfunc.dat')
   READ(1,'(F15.7)')(PFUNC(J),J=JA,JB)
   CLOSE(1)
 
-!$OMP PARALLEL DO SCHEDULE(static) &
-!$OMP PRIVATE(i,j)
+
+!$OMP PARALLEL DO
   DO J=1,NY
   DO I=1,NX
     DFUNC(I,J)=0.D0
@@ -23,9 +39,8 @@
 !$OMP END PARALLEL DO
 
 
-!$OMP PARALLEL DO SCHEDULE(static) &
-!$OMP FIRSTPRIVATE(CDD, IA, IB, JA, JB) &
-!$OMP PRIVATE(i,j)
+!$OMP PARALLEL DO &
+!$OMP FIRSTPRIVATE(CDD, IA, IB, JA, JB)
   DO J=JA,JB
   DO I=IA,IB
     DFUNC(I,J)=PFUNC(J)*CDD
@@ -38,11 +53,14 @@
 
 
 ! ********************************************
-  subroutine Inflow_profile(nstep, UUIN, VVIN)
+  subroutine Inflow_profile()
+  use array_def
+  use param_def
 
   implicit none
-  double precision, dimension(NSTEP)         :: UUIN, VVIN
-  integer          :: i, nstep
+  integer  :: i, nstep
+
+  nstep = para%last_step
 
   OPEN(1,FILE='time-hist-inflow_5.0deg.dat',FORM='FORMATTED')
   READ(1,'(2F20.15)') (UUIN(i),VVIN(i),i=1,NSTEP)
@@ -60,11 +78,11 @@
 
 
 ! **************************************************
-  subroutine read_rst_Data(time, UU, VV, PP)
+  subroutine read_rst_Data(time)
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, dimension(0:NX+2,0:NY+2) :: UU, VV, PP
   integer          :: i, j, lx, ly
   double precision :: dre, time
 
@@ -81,19 +99,18 @@
 
 
 ! *********************************************************
-  subroutine wrt_RCSIns(istep, time, A, UU, VV, HU, HV, HW)
+  subroutine wrt_RCSIns(istep, time)
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  real,             dimension(NX,NY,NZ)      :: HU, HV, HW
-  double precision, dimension(0:NX+2,0:NY+2) :: UU, VV
-  double precision, dimension(2)             :: A
   integer          :: i, j, k, istep, ii
   double precision :: time
   real             :: t
 
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(i, j, t)
+!$OMP PRIVATE(t)
   DO J=1,NY
   DO I=1,NX
     t = SNGL(UU(I,J)+UU(I,J+1))*0.5D0
@@ -105,7 +122,7 @@
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(i, j, t)
+!$OMP PRIVATE(t)
   DO J=1,NY
   DO I=1,NX
     t = SNGL(VV(I,J)+VV(I+1,J))*0.5D0
@@ -148,15 +165,13 @@
 !  end subroutine wrt_VisIns
 
 
-! *************************************************************************
-  subroutine wrt_SPHIns(dx, dy, istep, time, UU, VV, P, HUVW, HP)
+! ****************************************************
+  subroutine wrt_SPHIns(istep, time)
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, intent(in),  dimension(0:NX+2,0:NY+2) :: UU, VV
-  real,             dimension(3,NX,NY,NZ)    :: HUVW
-  real,             dimension(NX,NY,NZ)      :: HP
-  double precision, dimension(NX,NY)         :: P
   integer          :: i, j, k, istep, svType, dType
   double precision :: time, dx, dy
   real             :: xorg, yorg, zorg, t, u1, u2, u3
@@ -168,16 +183,16 @@
   xorg = -5.0
   yorg = -5.0
   zorg = 0.0
-  xpch = SNGL(dx)
-  ypch = SNGL(dy)
-  zpch = SNGL(dx)
+  xpch = SNGL(para%dx)
+  ypch = SNGL(para%dy)
+  zpch = SNGL(para%dx)
   tm   = SNGL(time)
 
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(i, j, t)
+!$OMP PRIVATE(t)
   DO J=1,NY
   DO I=1,NX
-    t = SNGL(P(I,J))
+    t = SNGL(PP(I,J))
     HP(I,J,1)=t
     HP(I,J,2)=t
     HP(I,J,3)=t
@@ -200,7 +215,7 @@
 
 !$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(u3) &
-!$OMP PRIVATE(i, j, u1, u2)
+!$OMP PRIVATE(u1, u2)
   DO J=1,NY
   DO I=1,NX
     u1 = SNGL(UU(I,J)+UU(I,J+1))*0.5D0
@@ -235,11 +250,11 @@
 
 
 ! ****************************
-  subroutine wrt_Profile(ts, UAVE)
+  subroutine wrt_Profile(ts)
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  double precision, dimension(NX,NY) :: UAVE
   integer          :: j, ts
   character(50)    :: s
 
@@ -253,20 +268,19 @@
   end subroutine wrt_Profile
 
 
-! **********************************************************************************
-  subroutine wrt_RCSAvr(time, nstep, UAVE, VAVE, A, HUAVE, HVAVE, HWAVE)
+! ******************************************************
+  subroutine wrt_RCSAvr(step, time)
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  real,             dimension(NX,NY,NZ)      :: HUAVE, HVAVE, HWAVE
-  double precision, dimension(NX,NY)         :: UAVE, VAVE
-  double precision, dimension(2)             :: A
-  integer          :: i, j, k, ii, nstep
+  integer          :: i, j, k, ii, step
   double precision :: time
   real             :: t
 
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(i, j, t)
+!$OMP PRIVATE(t)
   DO J=1,NY
   DO I=1,NX
     t = SNGL(UAVE(I,J))
@@ -278,7 +292,7 @@
 !$OMP END PARALLEL DO
 
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(i, j, t)
+!$OMP PRIVATE(t)
   DO J=1,NY
   DO I=1,NX
     t = SNGL(VAVE(I,J))
@@ -292,7 +306,7 @@
 !   HWAVE(I,J,K)=0.0       initialize at init_Arrays()
 
   open(unit=11,file='3d-tave-vis.dat',form='unformatted')
-  write(11) NSTEP,SNGL(TIME)
+  write(11) STEP,SNGL(TIME)
   write(11) (SNGL(A(II)),II=1,2)
   write(11) (((HUAVE(i,j,k),i=1,nx),j=1,ny),k=1,nz)
   write(11) (((HVAVE(i,j,k),i=1,nx),j=1,ny),k=1,nz)
@@ -304,15 +318,14 @@
 
 
 ! ************************************************************
-  subroutine wrt_SPHAvr(dx, dy, istep, time, UAVE, VAVE, HUVW)
+  subroutine wrt_SPHAvr(step, time)
+  !$ use omp_lib
+  use param_def
+  use array_def
 
   implicit none
-  include 'size.fi'
-  real,             dimension(3,NX,NY,NZ)    :: HUVW
-  double precision, dimension(NX,NY)         :: UAVE, VAVE
-  double precision, dimension(NX,NY)         :: U, V
-  integer          :: i, j, k, istep, svType, dType
-  double precision :: time, dx, dy
+  integer          :: i, j, k, step, svType, dType
+  double precision :: time
   real             :: xorg, yorg, zorg, u1, u2, u3
   real             :: xpch, ypch, zpch, tm
   character(30)    :: s
@@ -322,16 +335,16 @@
   xorg = -5.0
   yorg = -5.0
   zorg = 0.0
-  xpch = SNGL(dx)
-  ypch = SNGL(dy)
-  zpch = SNGL(dx)
+  xpch = SNGL(para%dx)
+  ypch = SNGL(para%dy)
+  zpch = SNGL(para%dx)
   tm   = SNGL(time)
 
   u3 = 0.0
 
 !$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(u3) &
-!$OMP PRIVATE(i, j, u1, u2)
+!$OMP PRIVATE(u1, u2)
   DO J=1,NY
   DO I=1,NX
     u1 = SNGL(UAVE(I,J))
@@ -349,14 +362,14 @@
   END DO
 !$OMP END PARALLEL DO
 
-  write (s, '("data/uvwa_",I9.9,".sph")') istep
+  write (s, '("data/uvwa_",I9.9,".sph")') step
   
   open (unit=22,file=s,form='unformatted')
   write (22) svType, dType
   write (22) nx, ny, nz
   write (22) xorg, yorg, zorg
   write (22) xpch, ypch, zpch
-  write (22) istep, tm
+  write (22) step, tm
   write (22) HUVW
   close (unit=22)
 
