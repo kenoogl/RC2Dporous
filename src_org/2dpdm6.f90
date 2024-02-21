@@ -812,8 +812,8 @@ END program main
 !$OMP PRIVATE(i, j)
   DO J=1,NY
   DO I=1,NX
-    UAVE(I,J) = c1 * UAVE(I,J) + c2 * (UU(I,J)+UU(I,J+1))*0.5D0
-    VAVE(I,J) = c1 * VAVE(I,J) + c2 * (VV(I,J)+VV(I+1,J))*0.5D0
+    UAVE(I,J) = c2 * UAVE(I,J) + c1 * (UU(I,J)+UU(I,J+1))*0.5D0
+    VAVE(I,J) = c2 * VAVE(I,J) + c1 * (VV(I,J)+VV(I+1,J))*0.5D0
   END DO
   END DO
 !$OMP END PARALLEL DO
