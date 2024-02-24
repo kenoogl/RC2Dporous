@@ -1,18 +1,43 @@
+
+!================================
+module array_def
+implicit none
+include 'size.fi'
+double precision, dimension(NX,NY)         :: RHS, DFUNC, UAVE, VAVE
+double precision, dimension(0:NX+2,0:NY+2) :: PP
+double precision, dimension(NSTEP)         :: UUIN, VVIN
+double precision, dimension(NY)            :: PFUNC
+
+#ifdef _SPH
+real, dimension(3,NX,NY,NZ)                :: HUVW
+real, dimension(NX,NY,NZ)                  :: HP
+#else
+real, dimension(NX,NY,NZ)                  :: HUAVE, HVAVE, HWAVE, HU, HV, HW
+double precision, dimension(2)             :: A
+#endif
+
+end module array_def
+!================================
+
 program main
 !$ use omp_lib
-use performance_monitor
-use param_def
 use array_def
+use performance_monitor
 
 implicit none
 double precision :: time, dt, AveragedTime, err
 integer          :: ICOUNT, AveragedStep
 integer          :: ISTEP, LOOP
+double precision, dimension(:,:), pointer :: UU, VV, UO, VO, PNT
 
+include 'param.fi'
 
 !========================================================
 
-call setParams()
+allocate(UU(0:NX+2,0:NY+2), VV(0:NX+2,0:NY+2), UO(0:NX+2,0:NY+2), VO(0:NX+2,0:NY+2))
+nullify( PNT )
+
+call setParams(para)
 
 TIME = 0.D0
 DT   = para%dt
@@ -21,17 +46,16 @@ LOOP = 0
 AveragedStep = 0
 AveragedTime = 0.0D0
 
-call allocArrays(nx, ny, nz, para%last_step, para%vis_mode)
 
 call init_watch(nx, ny)
 
 !call begin_watch(1)
-!call gen_grid()
+!call gen_grid(para)
 !call end_watch(1)
 
 
 call begin_watch(2)
-call PDM_profile()
+call PDM_profile(para)
 call end_watch(2)
 
 
@@ -41,14 +65,14 @@ call end_watch(3)
 
 
 call begin_watch(4)
-call initArrays(nx, ny, nz, para%vis_mode)
+call initArrays(UU, VV, UO, VO)
 call end_watch(4)
 
 
 ! Restart
 IF ( para%start_type == 1 ) THEN
   call begin_watch(5)
-  call read_rst_Data(time)
+  call read_rst_Data(time, UU, VV)
   call end_watch(5)
 END IF
 
@@ -63,23 +87,29 @@ OPEN(12,FILE='history.txt',FORM='FORMATTED')
 DO ISTEP=1, para%last_step
   TIME = TIME + DT
 
-  call begin_watch(6)
-  call swapVelocityArray()
+  call begin_watch(6) ! ポインタの付け替え, サブルーチン実装ではうまくいかない
+  PNT => UU
+  UU  => UO
+  UO  => PNT
+
+  PNT => VV
+  VV  => VO
+  VO  => PNT
   call end_watch(6)
 
 
   call begin_watch(7)
-  call uflux()
+  call uflux(para, UU, VV, UO, VO)
   call end_watch(7)
 
 
   call begin_watch(8)
-  call vflux()
+  call vflux(para, UU, VV, UO, VO)
   call end_watch(8)
 
 
   call begin_watch(9)
-  call Poisson_RHS()
+  call Poisson_RHS(para, UU, VV)
   call end_watch(9)
 
 !--------------------------------------------------------
@@ -89,8 +119,8 @@ DO ISTEP=1, para%last_step
     ERR=0.D0
 
     call begin_watch(10)
-    !call Poisson_AXB(err)
-    call Poisson_AXB2C(err)
+    !call Poisson_AXB(para, err)
+    call Poisson_AXB2C(para, err)
     call end_watch(10)
 
     ERR=DSQRT(ERR/DFLOAT(para%NOXY))
@@ -108,12 +138,12 @@ DO ISTEP=1, para%last_step
   call end_watch(12)
 
   call begin_watch(13)
-  call Prj_Vel()
+  call Prj_Vel(para, UU, VV)
   call end_watch(13)
 
 
   call begin_watch(14)
-  call BC_Vel(istep)
+  call BC_Vel(istep, para, UU, VV, UO)
   call end_watch(14)
   
 
@@ -138,13 +168,15 @@ DO ISTEP=1, para%last_step
 ! FLOW VISUALIZATION
   IF (MOD(ISTEP, para%Intvl_OutIns)==0) THEN
 
-    !call begin_watch(16)
-    !call wrt_RCSIns(istep, time)
-    !call end_watch(16)
-
+#ifdef _SPH
     call begin_watch(17)
-    call wrt_SPHIns(istep, time)
+    call wrt_SPHIns(istep, time, para, UU, VV)
     call end_watch(17)
+#else
+    call begin_watch(16)
+    call wrt_RCSIns(istep, time, UU, VV)
+    call end_watch(16)
+#endif
 
     ICOUNT=ICOUNT+1
     print "('RC-Scope date=',I10, '/', I10,'(Total)')", ICOUNT, para%last_step/para%Intvl_OutIns
@@ -157,9 +189,8 @@ DO ISTEP=1, para%last_step
     AveragedTime = AveragedTime + DT
 
     call begin_watch(18)
-    call accumVars(AveragedStep)
+    call accumVars(AveragedStep, UU, VV)
     call end_watch(18)
-
 
     IF (MOD(AveragedStep,para%Intvl_OutAvr)==0) THEN
 
@@ -167,15 +198,17 @@ DO ISTEP=1, para%last_step
       call wrt_Profile(istep)
       call end_watch(19)
 
-      !call begin_watch(20)
-      !call wrt_RCSAvr(AveragedStep, AveragedTime)
-      !call end_watch(20)
-
+#ifdef _SPH
       call begin_watch(21)
-      call wrt_SPHAvr(AveragedStep, AveragedTime)
+      call wrt_SPHAvr(AveragedStep, AveragedTime, para)
       call end_watch(21)
+#else
+      call begin_watch(20)
+      call wrt_RCSAvr(AveragedStep, AveragedTime)
+      call end_watch(20)
+#endif
+            
     end if
-
   end if
 
 END DO ! ISTEP

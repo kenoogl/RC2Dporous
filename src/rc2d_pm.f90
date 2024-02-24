@@ -3,7 +3,6 @@ module performance_monitor
 	implicit none
 	integer, PARAMETER :: nWatch=22
 
-	integer, private   :: nx, ny, nz
 	double precision, dimension(4,nWatch), private	:: sw
 	integer, dimension(nWatch)      	 , private  :: idx
 	double precision, dimension(nWatch)  , private  :: val
