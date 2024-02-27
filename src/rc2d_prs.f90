@@ -145,8 +145,9 @@ return
 end subroutine Shift_Prs
 
 
+#ifdef _WINDMILL
 ! *****************************
-subroutine BC_Prs()
+subroutine BC_Prs_WM()
 !$ use omp_lib
 use array_def
 
@@ -168,4 +169,33 @@ END DO
 !$OMP END PARALLEL DO
 
 return
-end subroutine BC_Prs
+end subroutine BC_Prs_WM
+#endif // _WINDMILL
+
+
+#ifdef _DSL
+! *****************************
+subroutine BC_Prs_DSL()
+!$ use omp_lib
+use array_def
+
+implicit none
+integer          :: i, j
+
+!$OMP PARALLEL DO
+DO I=1,NX+1
+    PP(I,1)   =PP(I,NY-1)
+    PP(I,NY+1)=PP(I,2)
+END DO
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO
+DO J=1,NY+1
+    PP(1,J)   =PP(NX-1,J)
+    PP(NX+1,J)=PP(2,J)
+END DO
+!$OMP END PARALLEL DO
+
+return
+end subroutine BC_Prs_DSL
+#endif // _DSL

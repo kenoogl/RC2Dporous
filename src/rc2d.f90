@@ -5,8 +5,10 @@ implicit none
 include 'size.fi'
 double precision, dimension(NX,NY)         :: RHS, DFUNC, UAVE, VAVE
 double precision, dimension(0:NX+2,0:NY+2) :: PP
+
+#ifdef _WINDMILL
 double precision, dimension(NSTEP)         :: UUIN, VVIN
-double precision, dimension(NY)            :: PFUNC
+#endif
 
 #ifdef _SPH
 real, dimension(3,NX,NY,NZ)                :: HUVW
@@ -30,6 +32,10 @@ integer          :: ICOUNT, AveragedStep
 integer          :: ISTEP, LOOP
 double precision, dimension(:,:), pointer :: UU, VV, UO, VO, PNT
 
+#ifdef _WINDMILL
+double precision, dimension(:),pointer    :: PFUNC
+#endif
+
 include 'param.fi'
 
 !========================================================
@@ -38,6 +44,11 @@ allocate(UU(0:NX+2,0:NY+2), VV(0:NX+2,0:NY+2), UO(0:NX+2,0:NY+2), VO(0:NX+2,0:NY
 nullify( PNT )
 
 call setParams(para)
+
+#ifdef _WINDMILL
+  call findWMindex(para)
+  allocate(PFUNC(para%NOBD))
+#endif
 
 TIME = 0.D0
 DT   = para%dt
@@ -54,15 +65,18 @@ call init_watch(nx, ny)
 !call end_watch(1)
 
 
+#ifdef _WINDMILL
 call begin_watch(2)
-call PDM_profile(para)
+!call PDM_profile(para)
+call gen_PDMprofile(para%NOBD, PFUNC)
+call set_DFUNC(para, para%NOBD, PFUNC)
 call end_watch(2)
 
 
 call begin_watch(3)
 call Inflow_profile()
 call end_watch(3)
-
+#endif
 
 call begin_watch(4)
 call initArrays(UU, VV, UO, VO)
@@ -79,8 +93,10 @@ END IF
 
 !========================================================
 
-
+#ifdef _RCS
 OPEN(10,FILE='3d-inst-vis.dat',FORM='UNFORMATTED')
+#endif
+
 OPEN(12,FILE='history.txt',FORM='FORMATTED')
 
 
@@ -134,7 +150,11 @@ DO ISTEP=1, para%last_step
 
 
   call begin_watch(12)
-  call BC_Prs()
+#ifdef _WINDMILL
+  call BC_Prs_WM()
+#else
+  call BC_Prs_DSL()
+#endif
   call end_watch(12)
 
   call begin_watch(13)
@@ -143,7 +163,11 @@ DO ISTEP=1, para%last_step
 
 
   call begin_watch(14)
-  call BC_Vel(istep, para, UU, VV, UO)
+#ifdef _WINDMILL
+  call BC_Vel_WM(istep, para, UU, VV, UO)
+#else
+  call BC_Vel_DSL(para, UU, VV)
+#endif
   call end_watch(14)
   
 
@@ -213,7 +237,10 @@ DO ISTEP=1, para%last_step
 
 END DO ! ISTEP
 
+#ifdef _RCS
 CLOSE(10)
+#endif
+
 CLOSE(12)
 
 

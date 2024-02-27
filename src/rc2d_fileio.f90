@@ -4,54 +4,13 @@ implicit none
 integer          :: m, stp, loop
 double precision :: tm, err
 
-write(m,"(I10, F10.6, I7, E14.7)") STP, TM, loop, err
+write(m,"(I10, F14.6, I7, E14.7)") STP, TM, loop, err
 
 return
 end subroutine log
 
 
-! **********************************************************
-subroutine PDM_profile(para)
-!$ use omp_lib
-use array_def
-
-implicit none
-integer          :: i, j, IA, IB, JA, JB
-double precision :: cdd
-
-include 'param.fi'
-
-cdd = para%cdd
-IA  = para%IA
-IB  = para%IB
-JA  = para%JA
-JB  = para%JB
-
-OPEN(1,FILE='pfunc.dat')
-READ(1,'(F15.7)')(PFUNC(J),J=JA,JB)
-CLOSE(1)
-
-!$OMP PARALLEL DO
-DO J=1,NY
-DO I=1,NX
-  DFUNC(I,J)=0.D0
-END DO
-END DO
-!$OMP END PARALLEL DO
-
-!$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(CDD, IA, IB, JA, JB)
-DO J=JA,JB
-DO I=IA,IB
-  DFUNC(I,J)=PFUNC(J)*CDD
-END DO
-END DO
-!$OMP END PARALLEL DO
-
-return
-end subroutine PDM_profile
-
-
+#ifdef _WINDMILL
 ! ********************************************
 subroutine Inflow_profile()
 use array_def
@@ -70,6 +29,7 @@ CLOSE(1)
 
 return
 end subroutine Inflow_profile
+#endif
 
 
 ! **************************************************
@@ -92,7 +52,7 @@ return
 end subroutine read_rst_Data
 
 
-#ifndef _SPH
+#ifdef _RCS
 ! *********************************************************
 subroutine wrt_RCSIns(istep, time, UU, VV)
 !$ use omp_lib
@@ -247,25 +207,7 @@ end subroutine wrt_SPHIns
 #endif
 
 
-! ****************************
-subroutine wrt_Profile(ts)
-use array_def
-
-implicit none
-integer          :: j, ts
-character(50)    :: s
-
-write (s, '("data/5D-10D-U-profile_",I9.9,".dat")') ts
-
-OPEN(1,FILE=s,FORM='FORMATTED')
-WRITE(1,'(2F15.7)')(UAVE(1001,j),UAVE(1501,j),j=1,NY)
-CLOSE(1)
-
-return
-end subroutine wrt_Profile
-
-
-#ifndef _SPH
+#ifdef _RCS
 ! ******************************************************
 subroutine wrt_RCSAvr(step, time)
 !$ use omp_lib

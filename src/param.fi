@@ -1,15 +1,16 @@
 type parameter_type
     integer		     :: start_type, last_step
-    integer		     :: scheme, problem, iter_max
+    integer		     :: scheme, iter_max
     integer          :: Intvl_OutAvr, Intvl_OutIns
     integer          :: Intvl_Disp, Intvl_OutHst
-    integer          :: IA, IB, JA, JB
     integer          :: NOXY
-    double precision :: cfl, omega, thickness, eps
+    double precision :: courant, omega, thickness, eps
     double precision :: Reynolds, dt, refL, refV
-    double precision :: DX, DY, XLEN, YLEN, CDD
+    double precision :: DX, DY, XLEN, YLEN, x0, y0
     double precision :: AVR_BEGIN
     double precision :: dy_visc
-	!character(len=50):: vfile, pfile, xfile
+    integer                            :: NOWM, PDMprofile, NOBD
+    integer, dimension(4,256)          :: IDXWM
+    double precision, dimension(5,256) :: pwm ! x,z,d,cord,cdd
 end type parameter_type
 type (parameter_type):: para

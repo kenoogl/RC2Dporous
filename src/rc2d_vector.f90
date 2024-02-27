@@ -22,6 +22,7 @@ DDXI= DXI/para%DX
 DDYI= DYI/para%DY
 C1 = 1.D0/16.D0
 C2 = 1.D0/24.D0
+SDRAGX = 0.D0
 
 !$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(dt, rei, DXI, DYI, DDXI, DDYI, C1, C2) &
@@ -56,9 +57,11 @@ DO I=2,NX-1
     VISX=((UO(I+1,J)-2.D0*UO(I,J)+UO(I-1,J))*DDXI &
          +(UO(I,J+1)-2.D0*UO(I,J)+UO(I,J-1))*DDYI)*REI
 
+#ifdef _WINDMILL
 !   POROUS DISK MODEL
     DVEL=DSQRT(UO(I,J)*UO(I,J)+VO(I,J)*VO(I,J))
     SDRAGX=-UO(I,J)*DVEL*DFUNC(I,J)
+#endif
 
 !   INTERMEDIATE VELOCITY
     UU(I,J)=UO(I,J)+DT*(-ADVX+VISX+SDRAGX)
@@ -94,6 +97,7 @@ DDXI= DXI/para%DX
 DDYI= DYI/para%DY
 C1 = 1.D0/16.D0
 C2 = 1.D0/24.D0
+SDRAGY = 0.D0
 
 !$OMP PARALLEL DO &
 !$OMP FIRSTPRIVATE(dt, rei, DXI, DYI, DDXI, DDYI, C1, C2) &
@@ -128,9 +132,11 @@ DO I=2,NX
     VISY=((VO(I+1,J)-2.D0*VO(I,J)+VO(I-1,J))*DDXI &
          +(VO(I,J+1)-2.D0*VO(I,J)+VO(I,J-1))*DDYI)*REI
 
+#ifdef _WINDMILL
 !   POROUS DISK MODEL
     DVEL=DSQRT(UO(I,J)*UO(I,J)+VO(I,J)*VO(I,J))
     SDRAGY=-VO(I,J)*DVEL*DFUNC(I,J)
+#endif
 
 !   INTERMEDIATE VELOCITY
     VV(I,J)=VO(I,J)+DT*(-ADVY+VISY+SDRAGY)
@@ -181,8 +187,9 @@ return
 end subroutine Prj_Vel
 
 
+#ifdef _WINDMILL
 ! ******************************************************
-subroutine BC_Vel(istep, para, UU, VV, UO)
+subroutine BC_Vel_WM(istep, para, UU, VV, UO)
 !$ use omp_lib
 use array_def
 
@@ -225,4 +232,53 @@ END DO
 !$OMP END PARALLEL DO
 
 return
-end subroutine BC_Vel
+end subroutine BC_Vel_WM
+#endif // _WINDMILL
+
+
+#ifdef _DSL
+! ******************************************************
+subroutine BC_Vel_WDSL(para, UU, VV)
+!$ use omp_lib
+
+implicit none
+integer          :: i, j
+double precision :: DXI, dt
+double precision, dimension(0:NX+2,0:NY+2) :: UU, VV
+
+include 'param.fi'
+
+DXI = 1.D0/para%DX
+dt  = para%dt
+
+!$OMP PARALLEL DO &
+!$OMP FIRSTPRIVATE(DXI, DT, ISTEP)
+DO J=2,NY
+    UU(1,J)=UU(IX-2,j)
+    UU(0,J)=UU(IX-3,j)
+    VV(1,J)=VV(i,JX-2)
+    VV(0,J)=VV(i,JX-3)
+    UU(NX,J)  = UU(2,j)
+    VV(NX+1,J)= VV(3,J)
+    VV(NX+2,J)= VV(4,J)
+    UU(NX+1,J)= UU(3,J)
+END DO
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO &
+!$OMP FIRSTPRIVATE(ISTEP)
+DO I=0,NX+2
+    UU(I,1)=UU(i,NY-2)
+    UU(I,0)=UU(i,NY-3)
+    VV(I,1)=VV(i,NY-2)
+    VV(I,0)=VV(i,NY-3)
+    UU(I,NY+1)=UU(i,2)
+    UU(I,NY+2)=UU(i,3)
+    VV(I,NY)  =VV(i,2)
+    VV(I,NY+1)=VV(i,3)
+END DO
+!$OMP END PARALLEL DO
+
+return
+end subroutine BC_Vel_DSL
+#endif // _DSL
