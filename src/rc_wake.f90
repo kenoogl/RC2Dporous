@@ -74,17 +74,34 @@ end function
 
 
 ! **********************************************************
-subroutine gen_PDMprofile(NOBD, PFUNC)
+subroutine gen_PDMprofile(NOBD, prof, PFUNC)
 implicit none
-integer          :: j, NOBD
-double precision :: pi
+integer          :: j, NOBD, prof
+double precision :: pi, x
 double precision, dimension(NOBD)  :: PFUNC
 
 pi = 2.0D0 * asin(1.0D0)
 
-do j=1,NOBD
-  PFUNC(j) = 0.5D0*( cos(2.0D0*pi*DBLE(j-1)/DBLE(NOBD-1)-pi)+1.D0 )
-end do
+profiles : select case (prof)
+case(0)  ! flat
+  do j=1,NOBD
+    PFUNC(j) = 1.0D0
+  end do
+
+case(1)  ! Gaussian
+  do j=1,NOBD
+    PFUNC(j) = 0.5D0*( cos(2.0D0*pi*DBLE(j-1)/DBLE(NOBD-1)-pi)+1.D0 )
+  end do
+
+case(2)  ! Pseudo double Gaussian
+  do j=1,NOBD
+    x = DBLE(j-1)/DBLE(NOBD-1)
+    PFUNC(j) = ( 0.5D0*(cos(4.0D0*pi*x-pi)+1.D0) &
+             +  0.25D0*(cos(2.0D0*pi*x-pi)+1.D0) ) / 1.2656
+  end do
+
+case default
+end select profiles
 
 return
 end subroutine gen_PDMprofile

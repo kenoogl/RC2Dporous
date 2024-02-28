@@ -132,7 +132,7 @@ read (33,*) para%scheme, char
     stop
   end if
 
-  write(*,*)'Profile of PDM : 1-Gaussian, 2-Double Gaussian'
+  write(*,*)'Profile of PDM : 0-Flat, 1-Gaussian, 2-Double Gaussian'
   read (33,*) para%PDMprofile, char
 
   do k=1,para%NOWM
@@ -250,7 +250,9 @@ write(*,*) 'Problem dependent parameters'
 
 #ifdef _WINDMILL
   write(*,*) 'Number of Windmill      :', para%NOWM
-  if (para%PDMprofile==1) then
+  if (para%PDMprofile==0) then
+    write(*,*)'Profile of PDM          : Flat'
+  else if (para%PDMprofile==1) then
     write(*,*)'Profile of PDM          : Gaussian'
   else
     write(*,*)'Profile of PDM          : Double Gaussian'

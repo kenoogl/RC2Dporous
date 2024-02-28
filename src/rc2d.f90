@@ -68,7 +68,7 @@ call init_watch(nx, ny)
 #ifdef _WINDMILL
 call begin_watch(2)
 !call PDM_profile(para)
-call gen_PDMprofile(para%NOBD, PFUNC)
+call gen_PDMprofile(para%NOBD, para%PDMprofile, PFUNC)
 call set_DFUNC(para, para%NOBD, PFUNC)
 call end_watch(2)
 
