@@ -1,0 +1,42 @@
+{
+	! rcin
+	"dry_run" : {"char" : "no"}, ! (yes | no)
+	"start" : {"char" : "initial"}, ! (initial | restart)
+	"Reference_Length" : {"real" : 0.5}, ! [m]
+	"Reference_Velocity" : {"real" : 0.3}, ! [m/s]
+	"Origin_of_Region" : {"real array" : [-2.5, -2.5] }, ! [m]
+	"Courant_number" : {"real" : 0.1}, ! [-]
+	"Computational_Region" : {"real array" : [7.5, 5.0] }, ! [m]
+	"Intervals" : {
+		"display" : {"int" : 100},
+		"history" : {"int" : 1},
+		"Instantaneous_file" : {"int" : 4000},
+		"averaged_file" : {"int" : 4000},
+	},
+	
+	"Poisson_parameter" : {
+		"coef_acceleration" : {"real" : 0.9},
+		"convergence_criteria" : {"real" : 1.0e-3},
+		"Iteration_max" : {"int" : 100}
+	},
+	"Start_time_for_averaging" : {"real" : 0.0}, ! [sec]
+	"Convection_Scheme" : {"char" : "3rd_upwind"}, ! (3rd_upwind | 5th_WCNS)
+	"Turbulence_Grid" : {
+		"Use_Grid" : {"char" : "yes"}, ! (yes | no)
+		"Distance_from_Inlet" : {"real" : 1.5}, ! [m]
+		"Grid_width" : {"real" : 0.05}, ! [m]
+		"side_space" : {"real" : 0.05} ! [m]
+	},
+	"Thickness_of_DSL" : {"real" : 0.02},
+	"Number_of_turbines" : {"int" : 1},
+	"turbine" : [
+		{
+			"No" : {"int" : 1},
+			"PDM_profile" : {"char" : "gaussian"}, ! (flat | gaussian | double_gaussian)
+			"center_position" : {"real array" : [0.001, 0.001]}, ! [m]
+			"blade_diameter" : {"real" : 0.75}, ! [m]
+			"cord_length" : {"real" : 0.01}, ! [m]
+			"pressure_loss_coef" : {"real" : 13.0} ! [-]
+		}
+	]
+}
