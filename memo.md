@@ -856,9 +856,87 @@ Elapsed time =     0.33802E+03
 - rc4-rc8を比較するとブロッケージ効果で外側の流速が上がっているよう。これは側面境界条件で変わるはず。トラクションフリーを試す。
 - PDMは透過的な圧力損失なので、物体があるときのような流れの回り込みは生じない。このため、渦が出来ずにエントレインメントや非定常性が強く出てこない。
 
+##### rc9
+
+- トラクションフリー条件で、rc4のパラメータで計算
+
+##### rc10
+
+- トラクションフリーで、rc5のパラメータ
+- トラクションフリーでは側方境界で変動を強制していないので、自然に流入出するだけ。このため、混合が不足し、裾野が狭い
+- 側方境界条件の影響は大きい。
+
+##### rc11
+
+- [Json-fortranの記事](https://libertytree-seek.com/technology/2308/)を参考にパーサーを実装
+- [Github](https://github.com/jacobwilliams/json-fortran)からソースをダウンロードし、"json-fortran"のディレクトリ名でsrcディレクトリと並置する
+
+~~~
+% tree .
+.
+├── json-fortran
+│   ├── CHANGELOG.md
+│   ├── CMakeLists.txt
+│   ├── LICENSE
+│   ├── README.md
+│   ├── build.sh
+│   ├── cmake
+│   ├── codecov.yml
+│   ├── files
+│   ├── fpm.toml
+│   ├── json-fortran.code-workspace
+│   ├── json-fortran.fobis
+│   ├── json-fortran.md
+│   ├── json-fortran.pc.cmake.in
+│   ├── media
+│   ├── pages
+│   ├── src
+│   │   ├── Makefile
+│   │   ├── include
+│   │   ├── json_file_module.F90
+│   │   ├── json_get_scalar_by_path.inc
+│   │   ├── json_get_vec_by_path.inc
+│   │   ├── json_get_vec_by_path_alloc.inc
+│   │   ├── json_initialize_arguments.inc
+│   │   ├── json_initialize_dummy_arguments.inc
+│   │   ├── json_kinds.F90
+│   │   ├── json_macros.inc
+│   │   ├── json_module.F90
+│   │   ├── json_parameters.F90
+│   │   ├── json_string_utilities.F90
+│   │   ├── json_value_module.F90
+│   │   ├── lib
+│   │   ├── test
+│   │   └── tests
+│   │       ├── introspection
+│   │       │   └── test_iso_10646_support.f90
+│   │       ├── jf_test_01.F90
+│   │       ├── jf_test_02.F90
+│   │       ├── jf_test_03.F90
+│   │       │   ...
+│   │       └── jf_test_49.F90
+│   └── visual_studio
+├── src
+│   ├── Makefile
+│   ├── param.fi
+│   ├── rc2d.f90
+│   ├── rc2d_fileio.f90
+│   ├── rc2d_pm.f90
+│   ├── rc2d_prs.f90
+│   ├── rc2d_util.f90
+│   ├── rc2d_vector.f90
+│   ├── rc_wake.f90
+│   └── size.fi
+~~~
+
+- Json-fortran/src/Makefileを実行すると、include, libディレクトリにそれぞれファイルとstatic libraryが生成される
+- 
+
 ### TODO
 
-- Crank-Nicholson scheme　→$\Delta t$を大きく
+- Crank-Nicholson scheme　→$\Delta t$​を大きく
+  - ALMでは翼端速度がTSR=4なら、$\Delta t$​が1/4になる。物体移動を1セル超えては与えられないので、RK2やAB2の方がよいかも。粘性を持ち込まない時間進行スキームがいい
+
 - Picard反復
 - WCNS scheme
 - Keep scheme
@@ -871,6 +949,8 @@ Elapsed time =     0.33802E+03
 - 乱流流入境界条件
   - forcingで所望の乱流強度
 - サマリファイル　計算の条件メモ=> DBでの参照
+- ボスをffvのファンと同様に実装。PDMの力はかけない
+- トラクションフリー
 
 
 
@@ -900,13 +980,11 @@ Elapsed time =     0.33802E+03
 - 評価をどのように進めるか？
   - 風車面の速度欠損量
   - 2D <> 3Dの相関
-  - 分布がガウス形状、ダブルウェルもありか？
   - パワーカーブから発電量予測
   - 係数の算出
     - ３D計算から
     - ±5度＋13.0
   - 2D -> 3Dへの推定　後ほど
-
 - 計算規模
 
 
