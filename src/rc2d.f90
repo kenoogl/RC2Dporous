@@ -1,4 +1,7 @@
 
+#define RC2D_VERS_MAJOR 1
+#define RC2D_VERS_MINOR 0
+
 !================================
 module array_def
 implicit none
@@ -38,12 +41,32 @@ double precision, dimension(:),pointer    :: PFUNC
 
 include 'param.fi'
 
+INTEGER           :: num_args
+CHARACTER(LEN=64) :: arg, input_file
+
 !========================================================
 
 allocate(UU(0:NX+2,0:NY+2), VV(0:NX+2,0:NY+2), UO(0:NX+2,0:NY+2), VO(0:NX+2,0:NY+2))
 nullify( PNT )
 
-call setParams(para)
+
+write(*,"('RC2D version ',I1'.',I1)") , RC2D_VERS_MAJOR, RC2D_VERS_MINOR
+
+num_args = command_argument_count()
+
+if (num_args /= 1) then
+  write(*,*) 'Command line error'
+  write(*,*) 'Usage : ./rc2d input_file'
+  stop
+end if
+
+CALL get_command_argument(1, arg)     ! Fortran 2003 or later
+input_file = trim(arg)
+
+
+
+call parse_jsonfile(para, input_file)
+
 
 #ifdef _WINDMILL
   call findWMindex(para)

@@ -195,22 +195,23 @@ use array_def
 
 implicit none
 integer          :: i, j, istep
-double precision :: DXI, dt
+double precision :: dtx, s1, s2
 double precision, dimension(0:NX+2,0:NY+2) :: UU, VV, UO
 
 include 'param.fi'
 
-DXI = 1.D0/para%DX
-dt  = para%dt
+dtx  = para%dt / para%DX
 
+!------------ original
+#if 0
 !$OMP PARALLEL DO &
-!$OMP FIRSTPRIVATE(DXI, DT, ISTEP)
+!$OMP FIRSTPRIVATE(dtx, ISTEP)
 DO J=2,NY
     UU(1,J)=UUIN(ISTEP)
     UU(0,J)=UUIN(ISTEP)
     VV(1,J)=VVIN(ISTEP)
     VV(0,J)=VVIN(ISTEP)
-    UU(NX,J)  =UO(NX,J)-DT*(UO(NX,J)-UO(NX-1,J))*DXI
+    UU(NX,J)  =UO(NX,J)-dtx*(UO(NX,J)-UO(NX-1,J))
     VV(NX+1,J)=VV(NX,J)
     VV(NX+2,J)=2.D0*VV(NX+1,J)-VV(NX,J)
     UU(NX+1,J)=2.D0*UU(NX,J)-UU(NX-1,J)
@@ -230,6 +231,51 @@ DO I=0,NX+2
     VV(I,NY+1)=VVIN(ISTEP)
 END DO
 !$OMP END PARALLEL DO
+#endif
+!------------
+
+
+! Traction free
+
+!$OMP PARALLEL DO FIRSTPRIVATE(dtx, ISTEP) private(s1, s2)
+DO J=2,NY
+  UU(1,J) = UUIN(ISTEP)
+  UU(0,J) = UUIN(ISTEP)
+  VV(1,J) = VVIN(ISTEP)
+  VV(0,J) = VVIN(ISTEP)
+
+  s1 = UO(NX,J)-dtx*(UO(NX,J)-UO(NX-1,J))
+  UU(NX  ,J) = s1
+  UU(NX+1,J) = 2.D0*s1-UU(NX-1,J)
+
+  s2 = VV(NX,J)
+  VV(NX+1,J) = s2
+  VV(NX+2,J) = s2
+END DO
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO private(s1, s2)
+DO I=2,NX
+  s1 = VV(I,2   ) + UU(I,2 ) - UU(I-1,2)
+  s2 = VV(I,NY-1) - UU(i,NY) + UU(i-1,NY)
+  VV(I,1   ) = s1
+  VV(I,0   ) = s1
+  VV(I,NY  ) = s2
+  VV(I,NY+1) = s2
+END DO
+!$OMP END PARALLEL DO
+
+!$OMP PARALLEL DO private(s1, s2)
+DO I=2,NX-1
+  s1 = UU(i,2 ) + VV(i+1,1 ) - VV(i,1 )
+  s2 = UU(i,NY) - VV(i+1,NY) + VV(i,NY)
+  UU(I,0)    = s1
+  UU(I,1)    = s1
+  UU(I,NY+1) = s2
+  UU(I,NY+2) = s2
+END DO
+!$OMP END PARALLEL DO
+
 
 return
 end subroutine BC_Vel_WM
@@ -238,7 +284,7 @@ end subroutine BC_Vel_WM
 
 #ifdef _DSL
 ! ******************************************************
-subroutine BC_Vel_WDSL(para, UU, VV)
+subroutine BC_Vel_DSL(para, UU, VV)
 !$ use omp_lib
 
 implicit none

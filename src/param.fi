@@ -1,5 +1,5 @@
 type parameter_type
-    integer		     :: start_type, last_step
+    integer		     :: start_type, last_step, problem
     integer		     :: scheme, iter_max
     integer          :: Intvl_OutAvr, Intvl_OutIns
     integer          :: Intvl_Disp, Intvl_OutHst
@@ -11,6 +11,6 @@ type parameter_type
     double precision :: dy_visc
     integer                            :: NOWM, PDMprofile, NOBD
     integer, dimension(4,256)          :: IDXWM
-    double precision, dimension(5,256) :: pwm ! x,z,d,cord,cdd
+    double precision, dimension(5,256) :: pwm ! x,y,d,cord,cdd
 end type parameter_type
 type (parameter_type):: para
